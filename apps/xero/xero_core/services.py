@@ -736,54 +736,6 @@ class XeroAccountingApi:
                     raise
 
         return ManualJournals(self, load_all)
-    
-    def load_journals(self, load_all=False, load_manual_journals=True, load_journals=True):
-        """
-        Unified method to load journals based on parameters.
-        
-        Args:
-            load_all: If True, ignore last update timestamp and load everything for selected journal types.
-                      If False (default), use incremental updates based on last update timestamp.
-                      Note: This controls timestamp behavior, not which types to load.
-            load_manual_journals: If True (default), load manual journals.
-            load_journals: If True (default), load regular journals.
-        
-        Returns:
-            dict: Results with success status and any errors
-        """
-        results = {
-            'success': True,
-            'errors': [],
-            'loaded_types': []
-        }
-        
-        # Respect individual flags for which journal types to load
-        # load_all only controls whether to ignore timestamps
-        print(f"[LOAD_JOURNALS] Parameters: load_all={load_all}, load_journals={load_journals}, load_manual_journals={load_manual_journals}")
-        
-        if load_journals:
-            print(f"[LOAD_JOURNALS] Loading regular journals (load_all={load_all})")
-            try:
-                self.journals(load_all=load_all).get()
-                results['loaded_types'].append('journals')
-            except Exception as e:
-                results['success'] = False
-                results['errors'].append(f"Failed to load journals: {str(e)}")
-        else:
-            print(f"[LOAD_JOURNALS] Skipping regular journals (load_journals=False)")
-        
-        if load_manual_journals:
-            print(f"[LOAD_JOURNALS] Loading manual journals (load_all={load_all})")
-            try:
-                self.manual_journals(load_all=load_all).get()
-                results['loaded_types'].append('manual_journals')
-            except Exception as e:
-                results['success'] = False
-                results['errors'].append(f"Failed to load manual journals: {str(e)}")
-        else:
-            print(f"[LOAD_JOURNALS] Skipping manual journals (load_manual_journals=False)")
-        
-        return results
 
     def profit_and_loss(self):
         """

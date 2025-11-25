@@ -26,21 +26,16 @@ class XeroUpdateDataView(APIView):
         Expected payload:
         {
             "tenant_id": "string",
-            "load_all": true,  // Optional, default: true - If true, ignores last update timestamp and loads everything.
+            "load_all": false  // Optional, default: false - If true, ignores last update timestamp and loads everything.
                               // If false, uses incremental updates based on last update timestamp.
-                              // Note: This controls timestamp behavior, not which journal types to load.
-            "load_manual_journals": true,  // Optional, default: true - load manual journals
-            "load_journals": true  // Optional, default: true - load regular journals
         }
         """
         tenant_id = request.data.get('tenant_id')
         if not tenant_id:
             return Response({"error": "tenant_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Get journal loading parameters (defaults to True for all)
+        # Get journal loading parameters
         load_all = request.data.get('load_all', False)
-        load_manual_journals = request.data.get('load_manual_journals', True)
-        load_journals = request.data.get('load_journals', True)
 
         try:
             tenant = XeroTenant.objects.get(tenant_id=tenant_id)
@@ -57,9 +52,7 @@ class XeroUpdateDataView(APIView):
             result = update_xero_data(
                 tenant_id, 
                 user=user,
-                load_all=load_all,
-                load_manual_journals=load_manual_journals,
-                load_journals=load_journals
+                load_all=load_all
             )
             
             if result['success']:

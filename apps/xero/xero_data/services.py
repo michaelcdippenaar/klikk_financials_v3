@@ -13,7 +13,7 @@ from apps.xero.xero_auth.models import XeroClientCredentials, XeroTenantToken
 logger = logging.getLogger(__name__)
 
 
-def update_xero_data(tenant_id, user=None, load_all=False, load_manual_journals=True, load_journals=True):
+def update_xero_data(tenant_id, user=None, load_all=False):
     """
     Service function to update Xero data models (transactions and journals) from API.
     This is separate from metadata updates (accounts, contacts, tracking).
@@ -21,9 +21,7 @@ def update_xero_data(tenant_id, user=None, load_all=False, load_manual_journals=
     Args:
         tenant_id: Xero tenant ID
         user: User object (optional, will use first active credentials if not provided)
-        load_all: If True (default), load both regular and manual journals. If False, check individual flags.
-        load_manual_journals: If True (default), load manual journals. Only used if load_all=False.
-        load_journals: If True (default), load regular journals. Only used if load_all=False.
+        load_all: If True, ignore last update timestamp and load all journals. If False (default), use incremental updates.
     
     Returns:
         dict: Result with status, message, errors, and stats
@@ -74,7 +72,6 @@ def update_xero_data(tenant_id, user=None, load_all=False, load_manual_journals=
         'invoices_updated': 0,
         'payments_updated': 0,
         'journals_updated': 0,
-        'manual_journals_updated': 0,
         'api_calls': 0,
     }
     
@@ -109,41 +106,19 @@ def update_xero_data(tenant_id, user=None, load_all=False, load_manual_journals=
         # print(f"[DATA UPDATE] Transaction updates completed")
         
         # Journals should run last (may depend on other data)
-        # Use the unified load_journals method with parameters
-        # load_all controls timestamp behavior (ignore vs incremental), not which types to load
-        if load_journals or load_manual_journals:
-            journal_types = []
-            if load_journals:
-                journal_types.append('regular')
-            if load_manual_journals:
-                journal_types.append('manual')
-            print(f"[DATA UPDATE] Starting journals update ({', '.join(journal_types)})")
-            
-            # Use the unified load_journals method
-            # load_all=True means ignore timestamp and load everything for selected types
-            journal_results = xero_api.load_journals(
-                load_all=load_all,
-                load_manual_journals=load_manual_journals,
-                load_journals=load_journals
-            )
-            
-            # Update stats based on what was loaded
-            for journal_type in journal_results['loaded_types']:
-                stats[f'{journal_type}_updated'] = 1
-                print(f"[DATA UPDATE] ✓ {journal_type} finished")
-                logger.info(f"Successfully updated {journal_type} for tenant {tenant_id}")
-            
-            # Add any errors from journal loading
-            if journal_results['errors']:
-                errors.extend(journal_results['errors'])
-                for error in journal_results['errors']:
-                    print(f"[DATA UPDATE] ✗ {error}")
-                    logger.error(error)
-            
-            # Count API calls (estimate: 1 per journal type loaded)
-            stats['api_calls'] += len(journal_results['loaded_types'])
-        else:
-            print(f"[DATA UPDATE] Skipping journals update (no journal types selected)")
+        # Call journals method directly
+        print(f"[DATA UPDATE] Starting journals update (load_all={load_all})")
+        try:
+            xero_api.journals(load_all=load_all).get()
+            stats['journals_updated'] = 1
+            stats['api_calls'] += 1
+            print(f"[DATA UPDATE] ✓ journals finished")
+            logger.info(f"Successfully updated journals for tenant {tenant_id}")
+        except Exception as e:
+            error_msg = f"Failed to update journals: {str(e)}"
+            print(f"[DATA UPDATE] ✗ journals failed: {str(e)}")
+            logger.error(error_msg)
+            errors.append(error_msg)
         
         duration = time.time() - start_time
         stats['duration_seconds'] = duration
