@@ -18,6 +18,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from rest_framework.authtoken.views import obtain_auth_token
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -37,3 +39,11 @@ urlpatterns = [
     path('xero/metadata/', include('apps.xero.xero_metadata.urls')),
     path('xero/validation/', include('apps.xero.xero_validation.urls')),
 ]
+
+# Serve static and media files
+# In production, use a web server (nginx, Apache) or WhiteNoise middleware to serve these files
+# For staging, we'll serve them via Django for convenience (even when DEBUG=False)
+if hasattr(settings, 'STATIC_ROOT') and settings.STATIC_ROOT:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+if hasattr(settings, 'MEDIA_URL') and hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
