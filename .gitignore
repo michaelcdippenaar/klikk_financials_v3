@@ -78,3 +78,5 @@ coverage.xml
 *.cover
 
 db_25112025.json
+*.sql
+database_dump.sql
