@@ -15,7 +15,8 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-staging-key-ch
 DEBUG = False
 
 # Update with your staging server domain
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')
+# Include: IP address, hostname, domain name (if applicable), localhost, and 127.0.0.1
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.1.236').split(',')
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
