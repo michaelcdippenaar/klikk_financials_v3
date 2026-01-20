@@ -32,14 +32,14 @@ DATABASES = {
         # For gunicorn with multiple workers, use 0 to disable connection pooling
         # Each worker will manage its own connections
         'CONN_MAX_AGE': 0,  # Disable persistent connections for gunicorn workers
-        'OPTIONS': {
-            'connect_timeout': 10,
-            # Additional options for better connection handling
-            'keepalives': 1,
-            'keepalives_idle': 30,
-            'keepalives_interval': 10,
-            'keepalives_count': 5,
-        }
+        # 'OPTIONS': {
+        #     'connect_timeout': 10,
+        #     # Additional options for better connection handling
+        #     'keepalives': 1,
+        #     'keepalives_idle': 30,
+        #     'keepalives_interval': 10,
+        #     'keepalives_count': 5,
+        # }
     }
 }
 
