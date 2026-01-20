@@ -29,12 +29,24 @@ DATABASES = {
         'PASSWORD': 'StrongPasswordHere',
         'HOST': '127.0.0.1',
         'PORT': '5432',
-        'CONN_MAX_AGE': 600,  # Reuse connections for 10 minutes (connection pooling)
+        # For gunicorn with multiple workers, use 0 to disable connection pooling
+        # Each worker will manage its own connections
+        'CONN_MAX_AGE': 0,  # Disable persistent connections for gunicorn workers
         'OPTIONS': {
             'connect_timeout': 10,
+            # Additional options for better connection handling
+            'keepalives': 1,
+            'keepalives_idle': 30,
+            'keepalives_interval': 10,
+            'keepalives_count': 5,
         }
     }
 }
+
+# Google Cloud credentials path (for BigQuery exports)
+# Set via environment variable: GOOGLE_APPLICATION_CREDENTIALS
+# Example: export GOOGLE_APPLICATION_CREDENTIALS=/home/mc/apps/klikk_financials_v3/credentials/klick-financials01-81b1aeed281d.json
+GOOGLE_APPLICATION_CREDENTIALS = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
 
 # Update JWT signing key
 SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY

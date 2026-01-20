@@ -3,10 +3,12 @@ Xero integration services - external system integrations and data distribution.
 """
 import asyncio
 import logging
+import os
 import pandas_gbq
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from google.oauth2 import service_account
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +16,52 @@ logger = logging.getLogger(__name__)
 _io_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix='bigquery_io')
 
 
+def get_google_credentials():
+    """
+    Get Google Cloud credentials from environment variable or settings.
+    
+    Returns:
+        service_account.Credentials: Google Cloud service account credentials
+    """
+    # Try environment variable first (for staging/production)
+    credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+    
+    # Fallback to settings if available
+    if not credentials_path and hasattr(settings, 'GOOGLE_APPLICATION_CREDENTIALS'):
+        credentials_path = settings.GOOGLE_APPLICATION_CREDENTIALS
+    
+    # Fallback to default path for development (only if file exists)
+    if not credentials_path:
+        default_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 
+                                   'credentials', 'klick-financials01-81b1aeed281d.json')
+        if os.path.exists(default_path):
+            credentials_path = default_path
+    
+    if not credentials_path:
+        raise ValueError(
+            "Google Cloud credentials not found. Set GOOGLE_APPLICATION_CREDENTIALS environment variable "
+            "or place credentials file in project/credentials/ directory."
+        )
+    
+    if not os.path.exists(credentials_path):
+        raise FileNotFoundError(
+            f"Google Cloud credentials file not found at: {credentials_path}. "
+            "Please set GOOGLE_APPLICATION_CREDENTIALS environment variable to the correct path."
+        )
+    
+    return service_account.Credentials.from_service_account_file(credentials_path)
+
+
 def update_google_big_query(df, table_id):
     """Synchronous BigQuery export function."""
     project_id = 'klick-financials01'
-    GS_CREDENTIALS = service_account.Credentials.from_service_account_file(
-        "/Users/mcdippenaar/development/klikk_financial_management/klikk_financials/klick-financials01-81b1aeed281d.json"
-    )
-    pandas_gbq.to_gbq(dataframe=df, destination_table=table_id, if_exists='replace', project_id=project_id,
-                      credentials=GS_CREDENTIALS)
+    try:
+        GS_CREDENTIALS = get_google_credentials()
+        pandas_gbq.to_gbq(dataframe=df, destination_table=table_id, if_exists='replace', project_id=project_id,
+                          credentials=GS_CREDENTIALS)
+    except Exception as e:
+        logger.error(f"Failed to export to BigQuery: {str(e)}")
+        raise
 
 
 async def update_google_big_query_async(df, table_id):

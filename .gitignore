@@ -80,3 +80,7 @@ coverage.xml
 db_25112025.json
 *.sql
 database_dump.sql
+
+# Google Cloud credentials
+credentials/
+**/klick-financials01-*.json
