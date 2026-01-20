@@ -252,7 +252,7 @@ class XeroApiClient:
                 "refresh_token": tenant_token.refresh_token
             }
             try:
-                response = requests.post(refresh_url, headers=headers, data=data, timeout=30)
+                response = requests.post(refresh_url, headers=headers, data=data)
                 response.raise_for_status()
                 new_token = response.json()
                 # Update the specific tenant token
