@@ -6,6 +6,7 @@ import logging
 from datetime import timedelta
 from django.utils import timezone
 
+from django.db import models
 from apps.xero.xero_core.models import XeroTenant
 from apps.xero.xero_sync.models import XeroLastUpdate
 from apps.xero.xero_sync.services import update_xero_models
@@ -35,8 +36,14 @@ def check_and_retry_out_of_sync(tenant_id=None, max_retry_age_hours=24):
         'details': []
     }
     
-    # Get out-of-sync items
-    query = XeroLastUpdate.objects.filter(out_of_sync=True)
+    # Get out-of-sync items (items with no date or date is None)
+    # Since out_of_sync field was removed, we consider items out of sync if:
+    # - date is None (never updated)
+    # - or date is older than max_retry_age_hours
+    cutoff_time = timezone.now() - timedelta(hours=max_retry_age_hours)
+    query = XeroLastUpdate.objects.filter(
+        models.Q(date__isnull=True) | models.Q(date__lt=cutoff_time)
+    )
     
     if tenant_id:
         try:
@@ -45,12 +52,6 @@ def check_and_retry_out_of_sync(tenant_id=None, max_retry_age_hours=24):
         except XeroTenant.DoesNotExist:
             logger.error(f"Tenant {tenant_id} not found")
             return results
-    
-    # Filter by age - only retry items that haven't been out of sync too long
-    cutoff_time = timezone.now() - timedelta(hours=max_retry_age_hours)
-    query = query.filter(
-        end_time__gte=cutoff_time
-    ) if query.exists() else query.none()
     
     out_of_sync_items = query.select_related('organisation')
     
@@ -117,19 +118,19 @@ def check_and_retry_out_of_sync(tenant_id=None, max_retry_age_hours=24):
                 logger.info(f"Retrying trail balance creation (tenant {tenant_id})")
                 process_xero_data(tenant_id)
                 
-                # Check if still out of sync
+                # Check if still out of sync (date should be recent)
                 updated_item = XeroLastUpdate.objects.get(
                     end_point='trail_balance',
                     organisation=item.organisation
                 )
                 
-                if not updated_item.out_of_sync:
+                if updated_item.date and updated_item.date >= cutoff_time:
                     detail['status'] = 'success'
                     results['successful'] += 1
                     logger.info(f"Successfully retried trail balance for tenant {tenant_id}")
                 else:
                     detail['status'] = 'failed'
-                    detail['error'] = updated_item.error_message or 'Still out of sync'
+                    detail['error'] = 'Still out of sync or date not updated'
                     results['failed'] += 1
                     logger.warning(f"Trail balance still out of sync for tenant {tenant_id}")
             

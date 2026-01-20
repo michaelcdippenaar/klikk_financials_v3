@@ -589,18 +589,17 @@ class Trigger(models.Model):
         if self.xero_last_update:
             # Use the XeroLastUpdate record
             last_update = self.xero_last_update
-            if not last_update.end_time:
+            if not last_update.date:
                 return True  # Never updated, should run
             
-            # Check if out of sync
-            if last_update.out_of_sync:
-                return True
+            # Since out_of_sync field was removed, we consider it out of sync if date is None
+            # (already checked above, so this is just for clarity)
             
             # Check if enough time has passed
             config = self.configuration or {}
             max_age_minutes = config.get('max_age_minutes')
             if max_age_minutes:
-                age = timezone.now() - last_update.end_time
+                age = timezone.now() - last_update.date
                 return age.total_seconds() / 60 > max_age_minutes
         
         return False

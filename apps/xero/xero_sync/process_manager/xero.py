@@ -486,16 +486,17 @@ def check_xero_sync_status(tenant_id: str, **context) -> dict:
             }
     
     # Check trail balance
+    # Since out_of_sync field was removed, consider out of sync if date is None
     try:
         last_update = XeroLastUpdate.objects.get(
             end_point='trail_balance',
             organisation=tenant
         )
-        if last_update.out_of_sync:
+        if not last_update.date:
             out_of_sync_endpoints.append('process_data')
             details['process_data'] = {
                 'out_of_sync': True,
-                'error': last_update.error_message or 'Out of sync'
+                'error': 'Never updated'
             }
         else:
             details['process_data'] = {
@@ -510,16 +511,17 @@ def check_xero_sync_status(tenant_id: str, **context) -> dict:
         }
     
     # Check profit loss
+    # Since out_of_sync field was removed, consider out of sync if date is None
     try:
         last_update = XeroLastUpdate.objects.get(
             end_point='profit_loss',
             organisation=tenant
         )
-        if last_update.out_of_sync:
+        if not last_update.date:
             out_of_sync_endpoints.append('process_pnl')
             details['process_pnl'] = {
                 'out_of_sync': True,
-                'error': last_update.error_message or 'Out of sync'
+                'error': 'Never updated'
             }
         else:
             details['process_pnl'] = {
