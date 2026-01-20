@@ -418,8 +418,16 @@ class XeroJournalsSourceManager(models.Manager):
         if to_create:
             print(f"[PROCESS] Bulk creating {len(to_create)} journal entries...")
             try:
-                created = XeroJournals.objects.bulk_create(to_create, ignore_conflicts=True)
-                print(f"[PROCESS] Successfully bulk created {len(created)} journal entries")
+                # Batch bulk_create to avoid database locks and timeouts with large datasets
+                batch_size = 5000
+                total_created = 0
+                for i in range(0, len(to_create), batch_size):
+                    batch = to_create[i:i + batch_size]
+                    created = XeroJournals.objects.bulk_create(batch, ignore_conflicts=True)
+                    total_created += len(created)
+                    print(f"[PROCESS] Bulk created batch {i // batch_size + 1}: {len(created)} entries (total: {total_created}/{len(to_create)})")
+                
+                print(f"[PROCESS] Successfully bulk created {total_created} journal entries")
             except Exception as e:
                 print(f"[PROCESS] ERROR during bulk_create: {str(e)}")
                 logger.error(f"Failed to bulk create journals: {str(e)}", exc_info=True)

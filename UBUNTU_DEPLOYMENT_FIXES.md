@@ -61,7 +61,7 @@ Environment="DJANGO_SETTINGS_MODULE=klikk_business_intelligence.settings.staging
 ExecStart=/home/mc/apps/klikk_financials_v3/venv/bin/gunicorn \
     --workers 3 \
     --bind 0.0.0.0:8000 \
-    --timeout 120 \
+    --timeout 1800 \
     klikk_business_intelligence.wsgi:application
 
 [Install]
@@ -92,7 +92,7 @@ cd /home/mc/apps/klikk_financials_v3
 source venv/bin/activate
 export GOOGLE_APPLICATION_CREDENTIALS=/home/mc/apps/klikk_financials_v3/credentials/klick-financials01-81b1aeed281d.json
 export DJANGO_SETTINGS_MODULE=klikk_business_intelligence.settings.staging
-gunicorn --workers 3 --bind 0.0.0.0:8000 --timeout 120 klikk_business_intelligence.wsgi:application
+gunicorn --workers 3 --bind 0.0.0.0:8000 --timeout 600 klikk_business_intelligence.wsgi:application
 ```
 
 ### Step 5: Verify Fixes
@@ -124,7 +124,7 @@ gunicorn \
     --workers 3 \
     --worker-class sync \
     --worker-connections 1000 \
-    --timeout 120 \
+    --timeout 1800 \
     --keep-alive 5 \
     --max-requests 1000 \
     --max-requests-jitter 50 \
@@ -139,7 +139,7 @@ gunicorn \
 - `--workers 3`: Number of worker processes (adjust based on CPU cores)
 - `--max-requests 1000`: Restart workers after 1000 requests (prevents memory leaks)
 - `--max-requests-jitter 50`: Randomize restart to avoid all workers restarting at once
-- `--timeout 120`: Request timeout in seconds
+- `--timeout 1800`: Request timeout in seconds (30 minutes for large datasets with 20k+ records)
 
 ## Troubleshooting
 
