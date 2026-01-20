@@ -60,11 +60,13 @@ sudo systemctl daemon-reload
 sudo systemctl restart klikk-financials
 ```
 
-### Option 3: Nginx Proxy Timeout (If using Nginx)
+### Option 3: Nginx Proxy Timeout (CRITICAL - If using Nginx)
 
-If you're using Nginx as a reverse proxy, also increase its timeout:
+**IMPORTANT:** If you're getting 504 errors after exactly 60 seconds, nginx is timing out!
 
-Edit `/etc/nginx/sites-available/klikk-financials`:
+Nginx has its own timeout settings (default 60 seconds) that are separate from gunicorn. You **MUST** update nginx timeouts.
+
+Edit `/etc/nginx/sites-available/klikk-financials` (or your nginx config file):
 
 ```nginx
 location / {
@@ -74,11 +76,15 @@ location / {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     
-    # Increase timeouts for long-running operations (30 minutes for 20k+ records)
+    # CRITICAL: Increase timeouts for long-running operations (30 minutes for 20k+ records)
+    # Default nginx timeout is 60 seconds - this is why you see 504 after 1 minute!
     proxy_connect_timeout 1800s;
     proxy_send_timeout 1800s;
-    proxy_read_timeout 1800s;
+    proxy_read_timeout 1800s;  # THIS IS THE KEY ONE
     send_timeout 1800s;
+    
+    # Optional: Disable buffering for real-time responses
+    proxy_buffering off;
 }
 ```
 
@@ -87,6 +93,8 @@ Then reload nginx:
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+**See NGINX_TIMEOUT_FIX.md for detailed instructions and troubleshooting.**
 
 ## Recommended Timeout Values
 

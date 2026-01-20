@@ -7,5 +7,16 @@
 			"path": "../klikk_financials_v2"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"terminal.integrated.profiles.osx": {
+			"SSH Staging Server": {
+				"path": "/usr/bin/ssh",
+				"args": [
+					"mc@192.168.1.236"
+				],
+				"icon": "server"
+			}
+		},
+		"terminal.integrated.defaultProfile.osx": "SSH Staging Server"
+	}
 }

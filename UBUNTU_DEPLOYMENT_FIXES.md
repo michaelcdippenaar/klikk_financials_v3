@@ -61,12 +61,21 @@ Environment="DJANGO_SETTINGS_MODULE=klikk_business_intelligence.settings.staging
 ExecStart=/home/mc/apps/klikk_financials_v3/venv/bin/gunicorn \
     --workers 3 \
     --bind 0.0.0.0:8000 \
-    --timeout 1800 \
+    --timeout 3600 \
+    --graceful-timeout 3600 \
+    --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --log-level info \
     klikk_business_intelligence.wsgi:application
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+**Note:** Logs are automatically captured by systemd/journalctl. No need for `--access-logfile` or `--error-logfile` options. View logs with `sudo journalctl -u klikk-financials -f`.
+
+If you prefer log files, see `GUNICORN_LOG_SETUP.md` for setup instructions.
 
 ### Step 3: Update Code on Server
 
@@ -86,22 +95,29 @@ sudo systemctl daemon-reload
 sudo systemctl restart klikk-financials
 sudo systemctl status klikk-financials
 
-# Or if running manually
+# Or if running manually (without sudo - recommended for testing)
 pkill gunicorn
 cd /home/mc/apps/klikk_financials_v3
 source venv/bin/activate
 export GOOGLE_APPLICATION_CREDENTIALS=/home/mc/apps/klikk_financials_v3/credentials/klick-financials01-81b1aeed281d.json
 export DJANGO_SETTINGS_MODULE=klikk_business_intelligence.settings.staging
-gunicorn --workers 3 --bind 0.0.0.0:8000 --timeout 600 klikk_business_intelligence.wsgi:application
+./venv/bin/gunicorn --workers 3 --bind 0.0.0.0:8000 --timeout 3600 --graceful-timeout 3600 klikk_business_intelligence.wsgi:application
+
+# Or with sudo (using full path if needed)
+# sudo /home/mc/apps/klikk_financials_v3/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:8000 --timeout 3600 --graceful-timeout 3600 klikk_business_intelligence.wsgi:application
 ```
 
 ### Step 5: Verify Fixes
 
 1. **Check logs:**
    ```bash
+   # If using systemd service (recommended):
    sudo journalctl -u klikk-financials -f
-   # Or if using manual gunicorn:
+   
+   # Or if using manual gunicorn with log files:
    tail -f /var/log/gunicorn/error.log
+   # Or if logging to project directory:
+   tail -f /home/mc/apps/klikk_financials_v3/logs/gunicorn-error.log
    ```
 
 2. **Test database connection:**
@@ -118,13 +134,22 @@ gunicorn --workers 3 --bind 0.0.0.0:8000 --timeout 600 klikk_business_intelligen
 
 For better stability with database connections:
 
+**First, create log directory (if using log files):**
 ```bash
-# Recommended gunicorn command
-gunicorn \
+sudo mkdir -p /var/log/gunicorn
+sudo chown mc:mc /var/log/gunicorn
+```
+
+**Recommended gunicorn command (use full path from virtual environment):**
+
+```bash
+# Option 1: With log files (requires log directory setup above)
+/home/mc/apps/klikk_financials_v3/venv/bin/gunicorn \
     --workers 3 \
     --worker-class sync \
     --worker-connections 1000 \
-    --timeout 1800 \
+    --timeout 3600 \
+    --graceful-timeout 3600 \
     --keep-alive 5 \
     --max-requests 1000 \
     --max-requests-jitter 50 \
@@ -133,13 +158,46 @@ gunicorn \
     --access-logfile /var/log/gunicorn/access.log \
     --error-logfile /var/log/gunicorn/error.log \
     klikk_business_intelligence.wsgi:application
+
+# Option 2: Without log files (logs to stdout/stderr, captured by systemd/journalctl)
+/home/mc/apps/klikk_financials_v3/venv/bin/gunicorn \
+    --workers 3 \
+    --worker-class sync \
+    --worker-connections 1000 \
+    --timeout 3600 \
+    --graceful-timeout 3600 \
+    --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --bind 0.0.0.0:8000 \
+    --log-level info \
+    klikk_business_intelligence.wsgi:application
+
+# Option 3: Log to project directory (no sudo needed)
+/home/mc/apps/klikk_financials_v3/venv/bin/gunicorn \
+    --workers 3 \
+    --worker-class sync \
+    --worker-connections 1000 \
+    --timeout 3600 \
+    --graceful-timeout 3600 \
+    --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --bind 0.0.0.0:8000 \
+    --log-level info \
+    --access-logfile /home/mc/apps/klikk_financials_v3/logs/gunicorn-access.log \
+    --error-logfile /home/mc/apps/klikk_financials_v3/logs/gunicorn-error.log \
+    klikk_business_intelligence.wsgi:application
 ```
+
+**Note:** For systemd service, logs go to journalctl by default, so log file options are optional.
 
 **Key settings:**
 - `--workers 3`: Number of worker processes (adjust based on CPU cores)
 - `--max-requests 1000`: Restart workers after 1000 requests (prevents memory leaks)
 - `--max-requests-jitter 50`: Randomize restart to avoid all workers restarting at once
-- `--timeout 1800`: Request timeout in seconds (30 minutes for large datasets with 20k+ records)
+- `--timeout 3600`: Request timeout in seconds (60 minutes for very large datasets with 20k+ records)
+- `--graceful-timeout 3600`: Graceful shutdown timeout (allows workers to finish current requests)
 
 ## Troubleshooting
 

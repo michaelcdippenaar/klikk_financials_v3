@@ -48,6 +48,10 @@ DATABASES = {
 # Example: export GOOGLE_APPLICATION_CREDENTIALS=/home/mc/apps/klikk_financials_v3/credentials/klick-financials01-81b1aeed281d.json
 GOOGLE_APPLICATION_CREDENTIALS = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
 
+# GitHub webhook secret for deployment
+# Generate a secure random string: python -c "import secrets; print(secrets.token_urlsafe(32))"
+GITHUB_WEBHOOK_SECRET = os.environ.get('GITHUB_WEBHOOK_SECRET', '')
+
 # Update JWT signing key
 SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
 

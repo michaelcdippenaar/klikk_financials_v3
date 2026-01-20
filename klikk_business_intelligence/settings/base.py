@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',  # JWT authentication
     # Local apps
     'apps.user',
+    'apps.deployment',  # GitHub webhook for automatic deployment
     # Xero apps
     'apps.xero.xero_auth',
     'apps.xero.xero_core',
