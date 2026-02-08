@@ -77,6 +77,8 @@ nosetests.xml
 coverage.xml
 *.cover
 
+# Local database dumps
+database_dumps/
 db_25112025.json
 *.sql
 database_dump.sql
